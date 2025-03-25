@@ -71,7 +71,7 @@ public ResponseEntity<String> parsePdf(@RequestParam("file") MultipartFile file)
         return llmService.extractDataUsingLLM(text);
     }
 
-    // ✅ NEW: Parse PDF from a fixed location (src/main/resources/pdf/)
+    // 
     @GetMapping("/parse-from-disk")
     public String parseFromDisk(@RequestParam("filename") String filename) throws IOException {
         Path filePath = Paths.get("src/main/resources/pdf/", filename);
