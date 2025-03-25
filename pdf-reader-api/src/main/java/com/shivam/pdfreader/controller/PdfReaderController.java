@@ -1,9 +1,13 @@
 package com.shivam.pdfreader.controller;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,9 +27,43 @@ public class PdfReaderController {
         this.llmService = llmService;
     }
 
-    // ✅ Standard PDF Parsing API
+    // ✅ Standard PDF Parsing API (Multipart Upload)
     @PostMapping("/parse")
-    public String parsePdf(@RequestParam("file") MultipartFile file) throws IOException {
+public ResponseEntity<String> parsePdf(@RequestParam("file") MultipartFile file) {
+    try {
+        // Store the uploaded file temporarily
+        Path filePath = Paths.get(System.getProperty("java.io.tmpdir"), file.getOriginalFilename());
+        file.transferTo(filePath.toFile());
+
+        // Extract text from the PDF
+        String text = PdfParser.extractText(filePath.toString());
+
+        // Get data using the LLM service
+        String result = llmService.extractDataUsingLLM(text);
+
+        // Return the result with a 200 OK status
+        return ResponseEntity.ok(result);
+    } catch (IOException e) {
+        // Return error message in case of IOException
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                             .body("Error processing the PDF: " + e.getMessage());
+    } catch (Exception e) {
+        // Return error message for any other exceptions
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                             .body("Unexpected error: " + e.getMessage());
+    }
+}
+
+    // ✅ Secure PDF Parsing with Dynamic Password
+    @PostMapping("/parse-secure")
+    public String parsePdfWithPassword(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("firstname") String firstname,
+            @RequestParam("dob") String dob
+    ) throws IOException {
+        String password = firstname.toLowerCase() + dob.replace("-", "");
+        System.out.println("Generated Password: " + password);
+
         Path filePath = Paths.get(System.getProperty("java.io.tmpdir"), file.getOriginalFilename());
         file.transferTo(filePath.toFile());
 
@@ -33,19 +71,15 @@ public class PdfReaderController {
         return llmService.extractDataUsingLLM(text);
     }
 
-    // ✅ Secure PDF Parsing with Password Generation
-    @PostMapping("/parse-secure")
-    public String parsePdfWithPassword(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("firstname") String firstname,
-            @RequestParam("dob") String dob
-    ) throws IOException {
-        // Generate password dynamically
-        String password = firstname.toLowerCase() + dob.replace("-", "");
-        System.out.println("Generated Password: " + password);
+    // ✅ NEW: Parse PDF from a fixed location (src/main/resources/pdf/)
+    @GetMapping("/parse-from-disk")
+    public String parseFromDisk(@RequestParam("filename") String filename) throws IOException {
+        Path filePath = Paths.get("src/main/resources/pdf/", filename);
 
-        Path filePath = Paths.get(System.getProperty("java.io.tmpdir"), file.getOriginalFilename());
-        file.transferTo(filePath.toFile());
+        // ✅ Check if file exists
+        if (!Files.exists(filePath)) {
+            return "Error: File not found in resources/pdf directory.";
+        }
 
         String text = PdfParser.extractText(filePath.toString());
         return llmService.extractDataUsingLLM(text);
