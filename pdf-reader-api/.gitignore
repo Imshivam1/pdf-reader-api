@@ -4,3 +4,7 @@ src/main/resources/application.properties
 target/
 *.log
 *.class
+.Trash/
+.env/
+.DS_Store
+*.log
