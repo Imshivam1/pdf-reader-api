@@ -62,8 +62,8 @@ POST /api/pdf/parse
 **Response:**
 ```json
 {
-  "name": "John Doe",
-  "email": "john.doe@example.com",
+  "name": "Krishna Kumar",
+  "email": "krishna.kumar@example.com",
   "opening_balance": 1000,
   "closing_balance": 1500
 }
