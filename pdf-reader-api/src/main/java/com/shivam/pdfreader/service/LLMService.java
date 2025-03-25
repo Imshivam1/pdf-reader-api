@@ -20,7 +20,7 @@ public class LLMService {
         try {
             OpenAiService service = new OpenAiService(apiKey);
             CompletionRequest request = CompletionRequest.builder()
-                    .model("gpt-4-turbo")
+                    .model("o3-mini")
                     .prompt("Extract Name, Email, Opening Balance, and Closing Balance from the CASA statement below. Respond in JSON format:\n\n" + text)
                     .maxTokens(200)
                     .build();
