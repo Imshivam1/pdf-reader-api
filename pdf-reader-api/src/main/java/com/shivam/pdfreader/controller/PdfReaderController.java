@@ -31,28 +31,34 @@ public class PdfReaderController {
     @PostMapping("/parse")
 public ResponseEntity<String> parsePdf(@RequestParam("file") MultipartFile file) {
     try {
-        // Store the uploaded file temporarily
         Path filePath = Paths.get(System.getProperty("java.io.tmpdir"), file.getOriginalFilename());
         file.transferTo(filePath.toFile());
 
-        // Extract text from the PDF
-        String text = PdfParser.extractText(filePath.toString());
+        System.out.println("Processing file: " + filePath.toString());
 
-        // Get data using the LLM service
-        String result = llmService.extractDataUsingLLM(text);
-
-        // Return the result with a 200 OK status
-        return ResponseEntity.ok(result);
-    } catch (IOException e) {
-        // Return error message in case of IOException
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                             .body("Error processing the PDF: " + e.getMessage());
-    } catch (Exception e) {
-        // Return error message for any other exceptions
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                             .body("Unexpected error: " + e.getMessage());
-    }
+        String text;
+try {
+    text = PdfParser.extractText(filePath.toString());
+} catch (Exception ex) {
+    ex.printStackTrace();
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                         .body("PDF Parsing Error: " + ex.getMessage());
 }
+
+        System.out.println("Extracted text: " + text);
+
+        String result = llmService.extractDataUsingLLM(text);
+        System.out.println("LLM Response: " + result);
+        return ResponseEntity.ok(result);
+    } catch (IOException | RuntimeException e) {
+        e.printStackTrace(); // Keep this to log errors in the console
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                             .body("Error processing PDF: " + e.getClass().getName() + " - " + e.getMessage());
+    }
+    
+}
+
+
 
     // ✅ Secure PDF Parsing with Dynamic Password
     @PostMapping("/parse-secure")
