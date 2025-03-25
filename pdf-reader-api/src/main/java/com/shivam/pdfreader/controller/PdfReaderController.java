@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,73 +23,101 @@ import com.shivam.pdfreader.util.PdfParser;
 @RequestMapping("/api/pdf")
 public class PdfReaderController {
 
+    private static final Logger logger = LoggerFactory.getLogger(PdfReaderController.class);
+    
     private final LLMService llmService;
 
     public PdfReaderController(LLMService llmService) {
         this.llmService = llmService;
     }
 
-    // PDF Parsing API (Multipart Upload)
+    /**
+     * ✅ Standard PDF Parsing API (Multipart Upload)
+     */
     @PostMapping("/parse")
-public ResponseEntity<String> parsePdf(@RequestParam("file") MultipartFile file) {
-    try {
-        Path filePath = Paths.get(System.getProperty("java.io.tmpdir"), file.getOriginalFilename());
-        file.transferTo(filePath.toFile());
+    public ResponseEntity<String> parsePdf(@RequestParam("file") MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: Uploaded file is empty.");
+            }
 
-        System.out.println("Processing file: " + filePath.toString());
+            Path filePath = Paths.get(System.getProperty("java.io.tmpdir"), file.getOriginalFilename());
+            file.transferTo(filePath.toFile());
+            logger.info("Processing file: {}", filePath);
 
-        String text;
-try {
-    text = PdfParser.extractText(filePath.toString());
-} catch (Exception ex) {
-    ex.printStackTrace();
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                         .body("PDF Parsing Error: " + ex.getMessage());
-}
+            // Extract text from PDF
+            String text;
+            try {
+                text = PdfParser.extractText(filePath.toString());
+            } catch (Exception ex) {
+                logger.error("PDF Parsing Error", ex);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("PDF Parsing Error: " + ex.getMessage());
+            }
 
-        System.out.println("Extracted text: " + text);
+            logger.info("Extracted text: {}", text);
 
-        String result = llmService.extractDataUsingLLM(text);
-        System.out.println("LLM Response: " + result);
-        return ResponseEntity.ok(result);
-    } catch (IOException | RuntimeException e) {
-        e.printStackTrace(); // Keep this to log errors in the console
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                             .body("Error processing PDF: " + e.getClass().getName() + " - " + e.getMessage());
+            // Pass extracted text to LLM for processing
+            String result = llmService.extractDataUsingLLM(text);
+            logger.info("LLM Response: {}", result);
+            return ResponseEntity.ok(result);
+        } catch (IOException | RuntimeException e) {
+            logger.error("Error processing PDF", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error processing PDF: " + e.getClass().getName() + " - " + e.getMessage());
+        }
     }
-    
-}
 
-
-
-    // Secure PDF Parsing with Password
+    /**
+     * ✅ Secure PDF Parsing API with Password
+     */
     @PostMapping("/parse-secure")
-    public String parsePdfWithPassword(
+    public ResponseEntity<String> parsePdfWithPassword(
             @RequestParam("file") MultipartFile file,
             @RequestParam("firstname") String firstname,
-            @RequestParam("dob") String dob
-    ) throws IOException {
-        String password = firstname.toLowerCase() + dob.replace("-", "");
-        System.out.println("Generated Password: " + password);
+            @RequestParam("dob") String dob) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: Uploaded file is empty.");
+            }
 
-        Path filePath = Paths.get(System.getProperty("java.io.tmpdir"), file.getOriginalFilename());
-        file.transferTo(filePath.toFile());
+            String password = firstname.toLowerCase() + dob.replace("-", "");
+            logger.info("Generated Password: {}", password);
 
-        String text = PdfParser.extractText(filePath.toString());
-        return llmService.extractDataUsingLLM(text);
+            Path filePath = Paths.get(System.getProperty("java.io.tmpdir"), file.getOriginalFilename());
+            file.transferTo(filePath.toFile());
+
+            String text = PdfParser.extractText(filePath.toString());
+            String result = llmService.extractDataUsingLLM(text);
+            return ResponseEntity.ok(result);
+        } catch (IOException e) {
+            logger.error("Error processing secure PDF", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error processing PDF: " + e.getMessage());
+        }
     }
 
-    // 
+    /**
+     * ✅ Parse PDF from Disk (Pre-uploaded files in resources/pdf/)
+     */
     @GetMapping("/parse-from-disk")
-    public String parseFromDisk(@RequestParam("filename") String filename) throws IOException {
-        Path filePath = Paths.get("src/main/resources/pdf/", filename);
+    public ResponseEntity<String> parseFromDisk(@RequestParam("filename") String filename) {
+        try {
+            Path filePath = Paths.get("src/main/resources/pdf/", filename);
 
-        //Check if file exists
-        if (!Files.exists(filePath)) {
-            return "Error: File not found in resources/pdf directory.";
+            // Check if the file exists
+            if (!Files.exists(filePath)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Error: File not found in resources/pdf directory.");
+            }
+
+            String text = PdfParser.extractText(filePath.toString());
+            String result = llmService.extractDataUsingLLM(text);
+            return ResponseEntity.ok(result);
+        } catch (IOException e) {
+            logger.error("Error processing file from disk", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error processing file from disk: " + e.getMessage());
         }
-
-        String text = PdfParser.extractText(filePath.toString());
-        return llmService.extractDataUsingLLM(text);
     }
 }
