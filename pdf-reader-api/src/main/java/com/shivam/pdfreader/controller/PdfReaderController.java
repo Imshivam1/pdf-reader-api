@@ -27,7 +27,7 @@ public class PdfReaderController {
         this.llmService = llmService;
     }
 
-    // ✅ Standard PDF Parsing API (Multipart Upload)
+    // PDF Parsing API (Multipart Upload)
     @PostMapping("/parse")
 public ResponseEntity<String> parsePdf(@RequestParam("file") MultipartFile file) {
     try {
@@ -60,7 +60,7 @@ try {
 
 
 
-    // ✅ Secure PDF Parsing with Dynamic Password
+    // Secure PDF Parsing with Password
     @PostMapping("/parse-secure")
     public String parsePdfWithPassword(
             @RequestParam("file") MultipartFile file,
@@ -82,7 +82,7 @@ try {
     public String parseFromDisk(@RequestParam("filename") String filename) throws IOException {
         Path filePath = Paths.get("src/main/resources/pdf/", filename);
 
-        // ✅ Check if file exists
+        //Check if file exists
         if (!Files.exists(filePath)) {
             return "Error: File not found in resources/pdf directory.";
         }
