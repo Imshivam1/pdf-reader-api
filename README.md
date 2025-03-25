@@ -112,23 +112,8 @@ GET /api/pdf/parse-from-disk
 ---
 ## Possible Issues and Fixes
 
-### ❌ `cannot find symbol log` in `LLMService`
-✅ **Fix:** Add Lombok dependency in `pom.xml` and enable annotation processing in IDE.
-```xml
-<dependency>
-    <groupId>org.projectlombok</groupId>
-    <artifactId>lombok</artifactId>
-    <version>1.18.30</version>
-    <scope>provided</scope>
-</dependency>
-```
-
-### ❌ `OpenAiService` not working
-✅ **Fix:** Ensure `openai.api-key` is set in `application.yml`.
-
-### ❌ `PDFTextStripper` fails to extract text
-✅ **Fix:** Ensure the PDF is not encrypted or corrupt.
-
+### It is giving the data in timeline from the pdf file but still showing error in postman
+- Needs slight fix
 ---
 ## Contributors
 - **Shivam** - *Initial Development*
