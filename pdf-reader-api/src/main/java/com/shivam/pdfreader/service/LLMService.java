@@ -7,7 +7,10 @@ import com.theokanning.openai.completion.CompletionRequest;
 import com.theokanning.openai.completion.CompletionResult;
 import com.theokanning.openai.service.OpenAiService;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class LLMService {
     
     @Value("${openai.api.key}")
